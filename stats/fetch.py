@@ -5,6 +5,19 @@ from eosapi import Client
 c = Client(nodes=['https://api.eoslaomao.com'])
 
 def check_order(lower_bound=1):
+    """Checks for expired orders and returns relevant information.
+    Parameters:
+        - lower_bound (int): The lower bound of the order IDs to be checked. Defaults to 1 if not specified.
+    Returns:
+        - more (bool): Indicates if there are more orders to be checked.
+        - new_lower_bound (int): The new lower bound for the next check.
+        - expired_orders (list): A list of expired orders.
+    Processing Logic:
+        - Retrieves order data from a specific table.
+        - Checks if orders have expired.
+        - Counts total, expired, and free orders.
+        - Updates lower bound for next check."""
+    
     expired_orders = []
     now = time.time()
     new_lower_bound = lower_bound
@@ -35,6 +48,17 @@ def check_order(lower_bound=1):
 
 
 def fetch_creditors():
+    """Fetches a list of creditors from a specific table and separates them into paid and free accounts.
+    Parameters:
+        - c (object): An object that contains the table information.
+    Returns:
+        - free_accounts (list): A list of free creditor accounts.
+        - paid_accounts (list): A list of paid creditor accounts.
+    Processing Logic:
+        - Fetches creditor accounts from a specific table.
+        - Separates accounts into paid and free categories.
+        - Returns the lists of accounts."""
+    
     paid_accounts = []
     free_accounts = []
     r = c.get_table_rows(**{"code": "bankofstaked", "scope": "921459758687", "table": "creditor", "json": True, "limit": 1000, "upper_bound": None, "lower_bound": None, "table_key": "account_name"})
@@ -49,10 +73,40 @@ def fetch_creditors():
 
 
 def get_amount(asset):
+    """"Returns the amount of a given asset from a string containing the asset and its quantity.
+    Parameters:
+        - asset (str): A string containing the asset and its quantity, separated by a space.
+    Returns:
+        - float: The amount of the given asset.
+    Processing Logic:
+        - Splits the string at the first space.
+        - Converts the first element to a float.
+        - Returns the float value.
+    Example:
+        >>> get_amount("5 BTC")
+        5.0""""
+    
     amount = float(asset.split(" ")[0])
     return amount
 
 def get_account(a, free=True):
+    """Get account balance and RAM quota information for a specified account.
+    Parameters:
+        - a (dict): Dictionary containing account information.
+        - free (bool, optional): Whether to calculate RAM required for free accounts. Defaults to True.
+    Returns:
+        - balance (float): Total balance of the account.
+        - liquid_balance (float): Liquid balance of the account.
+    Processing Logic:
+        - Get account information from the provided dictionary.
+        - Calculate total balance by adding liquid balance and staked amounts.
+        - If the account has self-delegated bandwidth, add the staked amounts to the balance.
+        - If the account has a refund request, add the refunded amounts to the balance.
+        - If free is True, calculate RAM required using a 16% ratio.
+        - If free is False, calculate RAM required using a 12% ratio divided by 30.
+        - Print a formatted row of account information.
+        - Return the balance and liquid balance."""
+    
     r = c.get_account(a["account"])
     ram_quota = r["ram_quota"]
     liquid_balance = get_amount(r["core_liquid_balance"])
